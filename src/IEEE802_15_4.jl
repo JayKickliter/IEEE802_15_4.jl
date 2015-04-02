@@ -23,7 +23,7 @@ abstract Modulation
 type BPSK  <: Modulation end
 type OQPSK <: Modulation end
 
-const VERBOSE           = 1
+const VERBOSE           = 0
 const MAX_PKT_LEN       = 127
 const CHIP_MAP_BPSK     = Uint16[ 0b000100110101111, 0b111011001010000 ]
 const CHIP_MASK_BPSK    = 0b0011111111111110
@@ -32,7 +32,6 @@ type Packet
     
     
 end
-
 
 
 type PacketSink{M}
@@ -328,18 +327,25 @@ end
 
 function returnpacket( sink::PacketSink{BPSK} )
     println()
-    for i in 1:sink.packetlen-1
-        print( "=====" )
+    print("┏")
+    for i in 1:min( sink.packetlen*5+5, 8*5+5 )
+        print( "━" )
     end
-    println( "====" )
+    println("┓")
+    print("┃ 00: ")
     for i in 1:sink.packetlen
         print( "0x", hex(sink.packet[i], 2), " " )
+        if mod( i, 8 ) == 0
+            println("┃")
+            print( "┃ ", dec(i,2), ": " )
+        end
     end
     println()
-    for i in 1:sink.packetlen-1
-        print( "=====" )
+    print("┗")
+    for i in 1:min( sink.packetlen*5+5, 8*5+5 )
+        print( "━" )
     end
-    println( "====" )
+    println("┛")
     println()
     set_state( sink, SyncOnZero )
 end
