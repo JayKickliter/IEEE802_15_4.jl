@@ -1,8 +1,7 @@
 using IEEE802_15_4
 using ZMQ
 
-
-sink  = PacketSink( BPSK, 4, diff_enc = true, verbosity = 2 )
+sink  = PacketSink( BPSK, 5, diff_enc = true, verbosity = 0 )
 ctx   = Context( 1 )
 zsock = Socket( ctx, PULL )
 
