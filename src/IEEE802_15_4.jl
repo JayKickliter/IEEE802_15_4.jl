@@ -27,10 +27,6 @@ const MAX_PKT_LEN    = 127
 const CHIP_MAP_BPSK  = Uint16[ 0b000100110101111, 0b111011001010000 ]
 const CHIP_MASK_BPSK = 0b0011111111111110
 
-type Packet
-    
-    
-end
 
 
 type PacketSink{M}
@@ -39,7 +35,7 @@ type PacketSink{M}
     chips_per_symbol::Int      # how many chips per demodulated symbol. 15 For BPSK, 32 for OQPSK
     chip_map::Vector{Uint16}   # Chip to bit(s) mapping for modulation T
     sync_sequence::Uint8       # 802.15.4 standard is 4x 0 bytes and 1x0xA7, we will ignore the first byte
-    threshold::Int             # how many bits may be wrong in sync vector
+    chip_error_threshold::Int  # how many bits may be wrong in sync vector
     chip_shift_reg::Uint16     # chips are shifted in and decoded to look for first 0
     chip_shift_count::Int      # how many chips have we shifted into chip_shift_reg
     last_diff_enc_bit::Int     # previous not-yet-decoded bit, need to keep it to do differential decoding
@@ -54,16 +50,17 @@ type PacketSink{M}
     differential::Bool         # do differential decoding on the despread chips
     preable_zeros_count::Int   # how many zeros (bits, not byes) received before receiving the SFD byte
     verbosity::Int             # how much debug information to print
+    chip_errors::Int           # how many chip errors for the whole received packet
 end
 
-function PacketSink( modType, threshold; diff_enc = false, verbosity = 0 )
+function PacketSink( modType, chip_error_threshold; diff_enc = false, verbosity = 0 )
 
     modulation            = BPSK
     state                 = SyncOnZero
     chips_per_symbol      = 15
     chip_map              = CHIP_MAP_BPSK
     sync_sequence         = 0xA7
-    threshold             = threshold
+    chip_error_threshold  = chip_error_threshold
     chip_shift_reg        = zero( Uint16 )
     chip_shift_count      = 0
     last_diff_enc_bit     = 0
@@ -77,13 +74,14 @@ function PacketSink( modType, threshold; diff_enc = false, verbosity = 0 )
     packet_byte_bit_count = 0
     differential          = diff_enc
     preable_zeros_count   = 0
+    chip_errors           = 0
 
     PacketSink( modulation,
                 state,
                 chips_per_symbol,
                 chip_map,
                 sync_sequence,
-                threshold,
+                chip_error_threshold,
                 chip_shift_reg,
                 chip_shift_count,
                 last_diff_enc_bit,
@@ -97,7 +95,8 @@ function PacketSink( modType, threshold; diff_enc = false, verbosity = 0 )
                 packet_byte_bit_count,
                 differential,
                 preable_zeros_count,
-                verbosity )
+                verbosity,
+                chip_errors )
 end
 
 
@@ -121,9 +120,9 @@ function chips_to_bit( sink::PacketSink{BPSK}, chips::Integer )
         end
     end
 
-    is_valid_seq = min_errors <= sink.threshold
+    is_valid_seq = min_errors <= sink.chip_error_threshold
 
-    return ( is_valid_seq, best_match )
+    return ( is_valid_seq, best_match, min_errors )
 end
 
 
@@ -159,6 +158,7 @@ end
 function set_state( sink::PacketSink{BPSK}, ::Type{PayloadCollect} )
     sink.verbosity > 1 && println( sink.state, " -> PayloadCollect" )
     sink.state                 = PayloadCollect
+    sink.chip_errors           = 0
     sink.packet_byte           = 0
     sink.packet_byte_bit_count = 0
     sink.packet_byte_count     = 0
@@ -172,7 +172,7 @@ function synconzero( sink::PacketSink{BPSK}, input::Vector )
         sink.input_idx        += 1
         sink.chip_shift_count += 1
 
-        (is_valid_seq, rx_bit) = chips_to_bit( sink, sink.chip_shift_reg )
+        (is_valid_seq, rx_bit, chip_errors) = chips_to_bit( sink, sink.chip_shift_reg )
 
         if sink.differential
             diff_dec_bit           = rx_bit $ sink.last_diff_enc_bit
@@ -200,7 +200,7 @@ function sfdsearch( sink::PacketSink{BPSK}, input::Vector )
         sink.chip_shift_count += 1
 
         if sink.chip_shift_count == 15
-            (is_valid_seq, rx_bit) = chips_to_bit( sink, sink.chip_shift_reg )
+            (is_valid_seq, rx_bit, chip_errors) = chips_to_bit( sink, sink.chip_shift_reg )
             if !is_valid_seq
                 set_state( sink, SyncOnZero )
                 break
@@ -211,17 +211,17 @@ function sfdsearch( sink::PacketSink{BPSK}, input::Vector )
                 sink.last_diff_enc_bit = rx_bit
                 rx_bit                 = diff_dec_bit
             end
-            
+
             if rx_bit == 0
                 sink.preable_zeros_count += 1
             end
-            
+
             if sink.preable_zeros_count > 4*8+3
                 sink.verbosity > 1 && @printf( "Received %d zeros in the preable, going back to SyncOnZero\n", sink.preable_zeros_count )
                 set_state( sink, SyncOnZero )
                 break
             end
-            
+
             sink.packet_byte            = uint8( (sink.packet_byte >> 1) | (rx_bit << 7) )
             sink.chip_shift_count       = 0
             sink.chip_shift_reg         = zero( sink.chip_shift_reg )
@@ -246,7 +246,7 @@ function headersearch( sink::PacketSink{BPSK}, input::Vector )
         sink.chip_shift_count += 1
 
         if sink.chip_shift_count == 15
-            (is_valid_seq, rx_bit) = chips_to_bit( sink, sink.chip_shift_reg )
+            (is_valid_seq, rx_bit, chip_errors) = chips_to_bit( sink, sink.chip_shift_reg )
             if !is_valid_seq
                 set_state( sink, SyncOnZero )
                 break
@@ -290,7 +290,7 @@ function payloadcollect( sink::PacketSink{BPSK}, input::Vector )
         sink.chip_shift_count += 1
 
         if sink.chip_shift_count == 15
-            (is_valid_seq, rx_bit) = chips_to_bit( sink, sink.chip_shift_reg )
+            (is_valid_seq, rx_bit, chip_errors) = chips_to_bit( sink, sink.chip_shift_reg )
             if !is_valid_seq
                 set_state( sink, SyncOnZero )
                 break
@@ -306,6 +306,7 @@ function payloadcollect( sink::PacketSink{BPSK}, input::Vector )
             sink.packet_byte_bit_count += 1
             sink.chip_shift_count       = 0
             sink.chip_shift_reg         = zero( sink.chip_shift_reg )
+            sink.chip_errors           += chip_errors
 
             if sink.packet_byte_bit_count == 8
                 sink.packet_byte_count += 1
@@ -327,7 +328,10 @@ end
 
 
 function returnpacket( sink::PacketSink{BPSK} )
+    total_chips = sink.packetlen * sink.chips_per_symbol * 8
+    lqi = 255-int(sink.chip_errors/total_chips*255)
     println()
+    @printf( "LQI: %d\n", int(lqi) )
     print("┏")
     for i in 1:min( sink.packetlen*5+5, 8*5+5 )
         print( "━" )
