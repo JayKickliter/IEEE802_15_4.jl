@@ -165,12 +165,12 @@ function set_state( sink::PacketSink{BPSK}, ::Type{PayloadCollect} )
 end
 
 
-function synconzero( sink::PacketSink{BPSK}, input::Vector )
-    while sink.input_idx <= length( input )
-        sink.verbosity > 2 && @printf( "SyncOnZero. input_idx: %d, chip_shift_reg: %s, chip_shift_count: %d, packet_byte_bit_count: %d, packet_byte: %s, %s\n", sink.input_idx, bin(sink.chip_shift_reg, 15),sink.chip_shift_count, sink.packet_byte_bit_count, hex(sink.packet_byte,2), bin(sink.packet_byte,8))
-        sink.chip_shift_reg    = uint16( (sink.chip_shift_reg >> 1) | ((input[sink.input_idx] & 1)<<14) )
-        sink.input_idx        += 1
-        sink.chip_shift_count += 1
+function synconzero( sink::PacketSink{BPSK}, chip::Integer )
+    # while sink.input_idx <= length( input )
+    #     sink.verbosity > 2 && @printf( "SyncOnZero. input_idx: %d, chip_shift_reg: %s, chip_shift_count: %d, packet_byte_bit_count: %d, packet_byte: %s, %s\n", sink.input_idx, bin(sink.chip_shift_reg, 15),sink.chip_shift_count, sink.packet_byte_bit_count, hex(sink.packet_byte,2), bin(sink.packet_byte,8))
+    #     sink.chip_shift_reg    = uint16( (sink.chip_shift_reg >> 1) | ((input[sink.input_idx] & 1)<<14) )
+    #     sink.input_idx        += 1
+    #     sink.chip_shift_count += 1
 
         (is_valid_seq, rx_bit, chip_errors) = chips_to_bit( sink, sink.chip_shift_reg )
 
@@ -183,27 +183,26 @@ function synconzero( sink::PacketSink{BPSK}, input::Vector )
         if is_valid_seq && rx_bit == 0
             sink.preable_zeros_count += 1
             set_state( sink, SFDSearch )
-            break
+            return
         end
 
         sink.last_diff_enc_bit = 0
-    end
-
+    # end
 end
 
 
-function sfdsearch( sink::PacketSink{BPSK}, input::Vector )
-    while sink.input_idx <= length( input )
-        sink.verbosity > 2 && @printf( "SFDSearch. input_idx: %d, chip_shift_reg: %s, chip_shift_count: %d, packet_byte_bit_count: %d, packet_byte: %s, %s\n", sink.input_idx, bin(sink.chip_shift_reg, 15),sink.chip_shift_count, sink.packet_byte_bit_count, hex(sink.packet_byte,2), bin(sink.packet_byte,8))
-        sink.chip_shift_reg    = uint16( (sink.chip_shift_reg >> 1) | ((input[sink.input_idx] & 1)<<14) )
-        sink.input_idx        += 1
-        sink.chip_shift_count += 1
+function sfdsearch( sink::PacketSink{BPSK}, chip::Integer )
+    # while sink.input_idx <= length( input )
+    #     sink.verbosity > 2 && @printf( "SFDSearch. input_idx: %d, chip_shift_reg: %s, chip_shift_count: %d, packet_byte_bit_count: %d, packet_byte: %s, %s\n", sink.input_idx, bin(sink.chip_shift_reg, 15),sink.chip_shift_count, sink.packet_byte_bit_count, hex(sink.packet_byte,2), bin(sink.packet_byte,8))
+    #     sink.chip_shift_reg    = uint16( (sink.chip_shift_reg >> 1) | ((input[sink.input_idx] & 1)<<14) )
+    #     sink.input_idx        += 1
+    #     sink.chip_shift_count += 1
 
         if sink.chip_shift_count == 15
             (is_valid_seq, rx_bit, chip_errors) = chips_to_bit( sink, sink.chip_shift_reg )
             if !is_valid_seq
                 set_state( sink, SyncOnZero )
-                break
+                return
             end
 
             if sink.differential
@@ -219,7 +218,7 @@ function sfdsearch( sink::PacketSink{BPSK}, input::Vector )
             if sink.preable_zeros_count > 4*8+3
                 sink.verbosity > 1 && @printf( "Received %d zeros in the preable, going back to SyncOnZero\n", sink.preable_zeros_count )
                 set_state( sink, SyncOnZero )
-                break
+                return
             end
 
             sink.packet_byte            = uint8( (sink.packet_byte >> 1) | (rx_bit << 7) )
@@ -230,26 +229,25 @@ function sfdsearch( sink::PacketSink{BPSK}, input::Vector )
             if sink.packet_byte == sink.sync_sequence
                 sink.verbosity > 0 && println( "Got start of frame delimiter (SFD)")
                 set_state( sink, HeaderSearch )
-                break
+                return
             end
         end
-    end
-
+    # end
 end
 
 
-function headersearch( sink::PacketSink{BPSK}, input::Vector )
-    while sink.input_idx <= length( input )
-        sink.verbosity > 2 && @printf( "HeaderSearch. input_idx: %d, chip_shift_reg: %s, chip_shift_count: %d, packet_byte_bit_count: %d, packet_byte: %s, %s\n", sink.input_idx, bin(sink.chip_shift_reg, 15),sink.chip_shift_count, sink.packet_byte_bit_count, hex(sink.packet_byte,2), bin(sink.packet_byte,8))
-        sink.chip_shift_reg    = uint16( (sink.chip_shift_reg >> 1) | ((input[sink.input_idx] & 1)<<14) )
-        sink.input_idx        += 1
-        sink.chip_shift_count += 1
+function headersearch( sink::PacketSink{BPSK}, chip::Integer )
+    # while sink.input_idx <= length( input )
+    #     sink.verbosity > 2 && @printf( "HeaderSearch. input_idx: %d, chip_shift_reg: %s, chip_shift_count: %d, packet_byte_bit_count: %d, packet_byte: %s, %s\n", sink.input_idx, bin(sink.chip_shift_reg, 15),sink.chip_shift_count, sink.packet_byte_bit_count, hex(sink.packet_byte,2), bin(sink.packet_byte,8))
+    #     sink.chip_shift_reg    = uint16( (sink.chip_shift_reg >> 1) | ((input[sink.input_idx] & 1)<<14) )
+    #     sink.input_idx        += 1
+    #     sink.chip_shift_count += 1
 
         if sink.chip_shift_count == 15
             (is_valid_seq, rx_bit, chip_errors) = chips_to_bit( sink, sink.chip_shift_reg )
             if !is_valid_seq
                 set_state( sink, SyncOnZero )
-                break
+                return
             end
 
             if sink.differential
@@ -271,29 +269,29 @@ function headersearch( sink::PacketSink{BPSK}, input::Vector )
 
                 if  sink.packetlen > MAX_PKT_LEN || sink.packetlen < 1
                     set_state( sink, SyncOnZero )
-                    break
+                    return
                 end
 
                 set_state( sink, PayloadCollect )
-                break
+                return
             end
         end
-    end
+    # end
 end
 
 
-function payloadcollect( sink::PacketSink{BPSK}, input::Vector )
-    while sink.input_idx <= length( input )
-        sink.verbosity > 2 && @printf( "PayloadCollect. input_idx: %d, chip_shift_reg: %s, chip_shift_count: %d, packet_byte_bit_count: %d, packet_byte: %s, %s\n", sink.input_idx, bin(sink.chip_shift_reg, 15),sink.chip_shift_count, sink.packet_byte_bit_count, hex(sink.packet_byte,2), bin(sink.packet_byte,8))
-        sink.chip_shift_reg    = uint16( (sink.chip_shift_reg >> 1) | ((input[sink.input_idx] & 1)<<14) )
-        sink.input_idx        += 1
-        sink.chip_shift_count += 1
+function payloadcollect( sink::PacketSink{BPSK}, chip::Integer )
+    # while sink.input_idx <= length( input )
+    #     sink.verbosity > 2 && @printf( "PayloadCollect. input_idx: %d, chip_shift_reg: %s, chip_shift_count: %d, packet_byte_bit_count: %d, packet_byte: %s, %s\n", sink.input_idx, bin(sink.chip_shift_reg, 15),sink.chip_shift_count, sink.packet_byte_bit_count, hex(sink.packet_byte,2), bin(sink.packet_byte,8))
+    #     sink.chip_shift_reg    = uint16( (sink.chip_shift_reg >> 1) | ((input[sink.input_idx] & 1)<<14) )
+    #     sink.input_idx        += 1
+    #     sink.chip_shift_count += 1
 
         if sink.chip_shift_count == 15
             (is_valid_seq, rx_bit, chip_errors) = chips_to_bit( sink, sink.chip_shift_reg )
             if !is_valid_seq
                 set_state( sink, SyncOnZero )
-                break
+                return
             end
 
             if sink.differential
@@ -317,11 +315,11 @@ function payloadcollect( sink::PacketSink{BPSK}, input::Vector )
                 if sink.packet_byte_count + 1 > sink.packetlen
                     returnpacket( sink )
                     set_state( sink, SyncOnZero )
-                    break
+                    return
                 end
             end
         end
-    end
+    # end
 end
 
 
@@ -362,15 +360,21 @@ function exec( sink::PacketSink{BPSK}, input::Vector )
     sink.input_idx = 1
 
     while sink.input_idx <= length(input)
+        
+        sink.verbosity > 2 && @printf( "input_idx: %d, chip_shift_reg: %s, chip_shift_count: %d, packet_byte_bit_count: %d, packet_byte: %s, %s\n", sink.input_idx, bin(sink.chip_shift_reg, 15),sink.chip_shift_count, sink.packet_byte_bit_count, hex(sink.packet_byte,2), bin(sink.packet_byte,8))
+        sink.chip_shift_reg    = uint16( (sink.chip_shift_reg >> 1) | ((input[sink.input_idx] & 1)<<14) )
+        sink.input_idx        += 1
+        sink.chip_shift_count += 1
+        
 
         if sink.state == SyncOnZero
-            synconzero( sink, input )
+            synconzero( sink )
         elseif sink.state == SFDSearch
-            sfdsearch( sink, input )
+            sfdsearch( sink )
         elseif sink.state == HeaderSearch
-            headersearch( sink, input )
+            headersearch( sink )
         elseif sink.state == PayloadCollect
-            payloadcollect( sink, input )
+            payloadcollect( sink )
         end
 
     end
