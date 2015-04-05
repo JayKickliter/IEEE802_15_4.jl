@@ -6,33 +6,6 @@
     <key>variable</key>
     <param>
       <key>id</key>
-      <value>oversampling</value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>value</key>
-      <value>3</value>
-    </param>
-    <param>
-      <key>alias</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(40, 199)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-  </block>
-  <block>
-    <key>variable</key>
-    <param>
-      <key>id</key>
       <value>translate_taps</value>
     </param>
     <param>
@@ -60,7 +33,7 @@
     <key>variable</key>
     <param>
       <key>id</key>
-      <value>samp_rate</value>
+      <value>freq_shift</value>
     </param>
     <param>
       <key>_enabled</key>
@@ -68,7 +41,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>2.4e6</value>
+      <value>-samp_rate*oversampling/4</value>
     </param>
     <param>
       <key>alias</key>
@@ -76,34 +49,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(40, 135)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-  </block>
-  <block>
-    <key>variable</key>
-    <param>
-      <key>id</key>
-      <value>tune_freq</value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>value</key>
-      <value>(906+2*(channel-1))*1e6</value>
-    </param>
-    <param>
-      <key>alias</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(360, 23)</value>
+      <value>(144, 143)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -141,7 +87,7 @@
     <key>variable</key>
     <param>
       <key>id</key>
-      <value>freq_shift</value>
+      <value>tune_freq</value>
     </param>
     <param>
       <key>_enabled</key>
@@ -149,7 +95,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>-samp_rate*oversampling/4</value>
+      <value>(906+2*(channel-1))*1e6</value>
     </param>
     <param>
       <key>alias</key>
@@ -157,7 +103,61 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(144, 143)</value>
+      <value>(360, 23)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>id</key>
+      <value>samp_rate</value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>2.4e6</value>
+    </param>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(40, 135)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>id</key>
+      <value>oversampling</value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>3</value>
+    </param>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(40, 199)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -2590,69 +2590,6 @@
     </param>
   </block>
   <block>
-    <key>options</key>
-    <param>
-      <key>id</key>
-      <value>ieee802_15_4_900_MHz_ZMQ</value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>title</key>
-      <value>IEEE 802.15.4 900 NHz Forwarder</value>
-    </param>
-    <param>
-      <key>author</key>
-      <value>Jay Kickliter</value>
-    </param>
-    <param>
-      <key>description</key>
-      <value></value>
-    </param>
-    <param>
-      <key>window_size</key>
-      <value>2000, 1024</value>
-    </param>
-    <param>
-      <key>generate_options</key>
-      <value>qt_gui</value>
-    </param>
-    <param>
-      <key>category</key>
-      <value>Custom</value>
-    </param>
-    <param>
-      <key>run_options</key>
-      <value>prompt</value>
-    </param>
-    <param>
-      <key>run</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>max_nouts</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>realtime_scheduling</key>
-      <value>1</value>
-    </param>
-    <param>
-      <key>alias</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(10, 10)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-  </block>
-  <block>
     <key>qtgui_const_sink_x</key>
     <param>
       <key>id</key>
@@ -2981,6 +2918,69 @@
     <param>
       <key>_coordinate</key>
       <value>(1064, 384)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+  </block>
+  <block>
+    <key>options</key>
+    <param>
+      <key>id</key>
+      <value>ieee802_15_4_900_MHz_ZMQ</value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>title</key>
+      <value>IEEE 802.15.4 900 NHz Forwarder</value>
+    </param>
+    <param>
+      <key>author</key>
+      <value>Jay Kickliter</value>
+    </param>
+    <param>
+      <key>description</key>
+      <value></value>
+    </param>
+    <param>
+      <key>window_size</key>
+      <value>1900, 1024</value>
+    </param>
+    <param>
+      <key>generate_options</key>
+      <value>qt_gui</value>
+    </param>
+    <param>
+      <key>category</key>
+      <value>Custom</value>
+    </param>
+    <param>
+      <key>run_options</key>
+      <value>prompt</value>
+    </param>
+    <param>
+      <key>run</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>max_nouts</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>realtime_scheduling</key>
+      <value>1</value>
+    </param>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(10, 10)</value>
     </param>
     <param>
       <key>_rotation</key>
