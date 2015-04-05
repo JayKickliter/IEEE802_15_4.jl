@@ -45,7 +45,6 @@ type PacketSink{M}
     packetlen::Int             # length of packet
     packetlen_cnt::Int         # how many so far
     payload_cnt::Int           # how many bytes in payload
-    input_idx::Int             # our location in the input vector
     packet_byte_bit_count::Int # how many bits have we shifted into packet_byte
     differential::Bool         # do differential decoding on the despread chips
     preable_zeros_count::Int   # how many zeros (bits, not byes) received before receiving the SFD byte
@@ -70,7 +69,6 @@ function PacketSink( modType, chip_error_threshold; diff_enc = false, verbosity 
     packetlen             = 0
     packetlen_cnt         = 0
     payload_cnt           = 0
-    input_idx             = 0
     packet_byte_bit_count = 0
     differential          = diff_enc
     preable_zeros_count   = 0
@@ -91,7 +89,6 @@ function PacketSink( modType, chip_error_threshold; diff_enc = false, verbosity 
                 packetlen,
                 packetlen_cnt,
                 payload_cnt,
-                input_idx,
                 packet_byte_bit_count,
                 differential,
                 preable_zeros_count,
@@ -110,7 +107,7 @@ function chips_to_bit( sink::PacketSink{BPSK}, chips::Integer )
     min_errors = 16
     is_valid_seq = false
 
-    for symbol in 0:1
+    for symbol in 0x00:0x01
         reference_chips = CHIP_MAP_BPSK[ symbol+1 ]
         error_count     = count_bit_diffs( chips, reference_chips, CHIP_MASK_BPSK )
 
@@ -181,6 +178,7 @@ function synconzero( sink::PacketSink{BPSK} )
     end
 
     sink.last_diff_enc_bit = 0
+    return
 end
 
 
@@ -258,6 +256,8 @@ function headersearch( sink::PacketSink{BPSK} )
         set_state( sink, PayloadCollect )
         return
     end
+    
+    return
 end
 
 
@@ -331,14 +331,11 @@ end
 
 
 
-function exec( sink::PacketSink{BPSK}, input::Vector )
-    sink.input_idx = 1
+function exec( sink::PacketSink{BPSK}, input::AbstractVector )
 
-    while sink.input_idx <= length(input)
-
-        sink.verbosity > 2 && @printf( "input_idx: %d, chip_shift_reg: %s, chip_shift_count: %d, packet_byte_bit_count: %d, packet_byte: %s, %s\n", sink.input_idx, bin(sink.chip_shift_reg, 15),sink.chip_shift_count, sink.packet_byte_bit_count, hex(sink.packet_byte,2), bin(sink.packet_byte,8))
-        sink.chip_shift_reg    = uint16( (sink.chip_shift_reg >> 1) | ((input[sink.input_idx] & 1)<<14) )
-        sink.input_idx        += 1
+    for input_idx in 1:length(input)
+        sink.verbosity > 2 && @printf( "input_idx: %d, chip_shift_reg: %s, chip_shift_count: %d, packet_byte_bit_count: %d, packet_byte: %s, %s\n", input_idx, bin(sink.chip_shift_reg, 15),sink.chip_shift_count, sink.packet_byte_bit_count, hex(sink.packet_byte,2), bin(sink.packet_byte,8))
+        sink.chip_shift_reg    = uint16( (sink.chip_shift_reg >> 1) | ((input[input_idx] & 1)<<14) )
         sink.chip_shift_count += 1
 
 
@@ -351,7 +348,6 @@ function exec( sink::PacketSink{BPSK}, input::Vector )
         elseif sink.state == PayloadCollect
             payloadcollect( sink )
         end
-
     end
 end
 
@@ -407,7 +403,7 @@ end
 
 function make_packet( source::PacketSource, input::Vector{Uint8} )
     payload_len = uint8( length( input ) & 0b0111111 )
-    packet      = [ 0x00, 0x00, 0x00, 0x00, 0xA7, payload_len, input ]
+    packet      = Uint8[ 0x00, 0x00, 0x00, 0x00, 0xA7, payload_len, input ]
 end
 
 
